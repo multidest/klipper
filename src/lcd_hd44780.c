@@ -42,31 +42,23 @@ ndelay(uint32_t nsecs)
 
 // Write 8 bits to the hd44780 using the 8bit parallel interface
 static __always_inline void
-hd44780_xmit_bits(uint8_t toggle, struct gpio_out e, struct gpio_out d0
+hd44780_xmit_bits(uint8_t data, struct gpio_out e, struct gpio_out d0
                   , struct gpio_out d1, struct gpio_out d2, struct gpio_out d3
                   , struct gpio_out d4, struct gpio_out d5, struct gpio_out d6
                   , struct gpio_out d7)
 {
     ndelay(320000);
-    if (toggle & 0x01)
-        gpio_out_toggle(d0);
-    if (toggle & 0x02)
-        gpio_out_toggle(d1);
-    if (toggle & 0x04)
-        gpio_out_toggle(d2);
-    if (toggle & 0x08)
-        gpio_out_toggle(d3);
-    if (toggle & 0x10)
-        gpio_out_toggle(d4);
-    if (toggle & 0x20)
-        gpio_out_toggle(d5);
-    if (toggle & 0x40)
-        gpio_out_toggle(d6);
-    if (toggle & 0x80)
-        gpio_out_toggle(d7);
-    gpio_out_toggle(e);
+    gpio_out_write(d0, data & 0x01);
+    gpio_out_write(d1, data & 0x02);
+    gpio_out_write(d2, data & 0x04);
+    gpio_out_write(d3, data & 0x08);
+    gpio_out_write(d4, data & 0x10);
+    gpio_out_write(d5, data & 0x20);
+    gpio_out_write(d6, data & 0x40);
+    gpio_out_write(d7, data & 0x80);
+    gpio_out_write(e, 1);
     ndelay(5000);
-    gpio_out_toggle(e);
+    gpio_out_write(e, 0);
     ndelay(5000); // delay per char
 }
 
@@ -75,8 +67,7 @@ static void
 hd44780_xmit_byte(struct hd44780 *h, uint8_t data)
 {
     struct gpio_out e = h->e, d0 = h->d0, d1 = h->d1, d2 = h->d2, d3 = h->d3, d4 = h->d4, d5 = h->d5, d6 = h->d6, d7 = h->d7;
-    hd44780_xmit_bits(h->last ^ data, e, d0, d1, d2, d3, d4, d5, d6, d7);
-    h->last = data;
+    hd44780_xmit_bits(data, e, d0, d1, d2, d3, d4, d5, d6, d7);
     ndelay(500);
 }
 
@@ -104,16 +95,18 @@ void
 command_config_hd44780(uint32_t *args)
 {
     struct hd44780 *h = oid_alloc(args[0], command_config_hd44780, sizeof(*h));
+    h->d0 = gpio_out_setup(args[3], 1);
+    h->d1 = gpio_out_setup(args[4], 1);
+    h->d2 = gpio_out_setup(args[5], 1);
+    h->d3 = gpio_out_setup(args[6], 1);
+    h->d4 = gpio_out_setup(args[7], 1);
+    h->d5 = gpio_out_setup(args[8], 1);
+    h->d6 = gpio_out_setup(args[9], 1);
+    h->d7 = gpio_out_setup(args[10], 1);
     h->rs = gpio_out_setup(args[1], 0);
+    
+    ndelay(5000); // Wait 5us before sending data
     h->e = gpio_out_setup(args[2], 0);
-    h->d0 = gpio_out_setup(args[3], 0);
-    h->d1 = gpio_out_setup(args[4], 0);
-    h->d2 = gpio_out_setup(args[5], 0);
-    h->d3 = gpio_out_setup(args[6], 0);
-    h->d4 = gpio_out_setup(args[7], 0);
-    h->d5 = gpio_out_setup(args[8], 0);
-    h->d6 = gpio_out_setup(args[9], 0);
-    h->d7 = gpio_out_setup(args[10], 0);
 
     if (!CONFIG_HAVE_STRICT_TIMING) {
         h->cmd_wait_ticks = args[11];
@@ -140,6 +133,7 @@ command_hd44780_send_cmds(uint32_t *args)
 {
     struct hd44780 *h = oid_lookup(args[0], command_config_hd44780);
     gpio_out_write(h->rs, 0);
+    ndelay(5000); // Wait 5us before sending data
     uint8_t len = args[1], *cmds = command_decode_ptr(args[2]);
     hd44780_xmit(h, len, cmds);
 }
@@ -150,6 +144,7 @@ command_hd44780_send_data(uint32_t *args)
 {
     struct hd44780 *h = oid_lookup(args[0], command_config_hd44780);
     gpio_out_write(h->rs, 1);
+    ndelay(5000); // Wait 5us before sending data
     uint8_t len = args[1], *data = command_decode_ptr(args[2]);
     hd44780_xmit(h, len, data);
 }
@@ -171,7 +166,6 @@ hd44780_shutdown(void)
         gpio_out_write(h->d5, 0);
         gpio_out_write(h->d6, 0);
         gpio_out_write(h->d7, 0);
-        h->last = 0;
     }
 }
 DECL_SHUTDOWN(hd44780_shutdown);
