@@ -108,7 +108,7 @@ command_config_hd44780(uint32_t *args)
     const uint8_t LCD_ENTRYMODE = 0x04; // Set entrymode
     const uint8_t LCD_INCREASE = LCD_ENTRYMODE | 0x02; // Set cursor move direction -- Increase
     const uint8_t LCD_DECREASE = LCD_ENTRYMODE | 0x00; // Set cursor move direction -- Decrease
-    const uint8_t LCD_DISPLAYSHIFTOFF  LCD_ENTRYMODE | 0x00; // Display is not shifted
+    const uint8_t LCD_DISPLAYSHIFTOFF = LCD_ENTRYMODE | 0x00; // Display is not shifted
 
     struct hd44780 *h = oid_alloc(args[0], command_config_hd44780, sizeof(*h));
     ndelay(500000);
