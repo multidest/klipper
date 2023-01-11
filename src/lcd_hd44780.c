@@ -130,23 +130,23 @@ command_config_hd44780(uint32_t *args)
 #define LCD_DISPLAYSHIFTOFF LCD_ENTRYMODE | 0x00    /**<    Display is not shifted */
 
     // rest of display init
-    lcdCommand( LCD_8BIT | LCD_2LINE | LCD_5X8); //LCD Configuration: Bits, Lines and Font
+    hd44780_xmit_byte(h, LCD_8BIT | LCD_2LINE | LCD_5X8); //LCD Configuration: Bits, Lines and Font
     ndelay(150000); //more than 39micro seconds
     
-    lcdCommand(LCD_8BIT | LCD_2LINE | LCD_5X8);//LCD Configuration: Bits, Lines and Font
+    hd44780_xmit_byte(h, LCD_8BIT | LCD_2LINE | LCD_5X8);//LCD Configuration: Bits, Lines and Font
     ndelay(150000); //more than 39micro seconds
     
     //specification says 2 is enough but a 3rd one solve issue if restart with keypad buttons pressed 
-    lcdCommand(LCD_8BIT | LCD_2LINE | LCD_5X8);//LCD Configuration: Bits, Lines and Font
+    hd44780_xmit_byte(h, LCD_8BIT | LCD_2LINE | LCD_5X8);//LCD Configuration: Bits, Lines and Font
     ndelay(150000); //more than 39micro seconds
     
-    lcdCommand( LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKINGOFF);    //Display Control : Display on/off, Cursor, Blinking Cursor
+    hd44780_xmit_byte(h, LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKINGOFF);    //Display Control : Display on/off, Cursor, Blinking Cursor
     ndelay(150000);
     
-    lcdCommand(LCD_CLEAR);                  //Clear Screen
+    hd44780_xmit_byte(h, LCD_CLEAR);                  //Clear Screen
     ndelay(8000000); // clear is slow operation more than 1.53ms
     
-    lcdCommand(LCD_INCREASE | LCD_DISPLAYSHIFTOFF); //Entrymode: Sets cursor move direction (I/D); specifies to shift the display
+    hd44780_xmit_byte(h, LCD_INCREASE | LCD_DISPLAYSHIFTOFF); //Entrymode: Sets cursor move direction (I/D); specifies to shift the display
     ndelay(150000);
 
     ndelay(10000000);
