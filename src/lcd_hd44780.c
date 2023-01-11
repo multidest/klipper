@@ -94,6 +94,22 @@ hd44780_xmit(struct hd44780 *h, uint8_t len, uint8_t *data)
 void
 command_config_hd44780(uint32_t *args)
 {
+    // from repetier92
+    const uint8_t LCD_CONFIGURATION = 0x20; // Set function
+    const uint8_t LCD_8BIT = LCD_CONFIGURATION | 0x10; // 8 bits interface
+    const uint8_t LCD_2LINE = LCD_CONFIGURATION | 0x08; // 2 line display
+    const uint8_t LCD_5X8 = LCD_CONFIGURATION | 0x00; // 5 X 8 dots
+    const uint8_t LCD_DISPLAYMODE = 0x08; // Set displaymode
+    const uint8_t LCD_DISPLAYON = LCD_DISPLAYMODE | 0x04; // Display on
+    const uint8_t LCD_CURSOROFF = LCD_DISPLAYMODE | 0x00; // Cursor off
+    const uint8_t LCD_BLINKINGOFF = LCD_DISPLAYMODE | 0x00; // Blinking off
+    const uint8_t LCD_CLEAR = 0x01; // Clear screen
+    const uint8_t LCD_HOME = 0x02; // Cursor move to first digit
+    const uint8_t LCD_ENTRYMODE = 0x04; // Set entrymode
+    const uint8_t LCD_INCREASE = LCD_ENTRYMODE | 0x02; // Set cursor move direction -- Increase
+    const uint8_t LCD_DECREASE = LCD_ENTRYMODE | 0x00; // Set cursor move direction -- Decrease
+    const uint8_t LCD_DISPLAYSHIFTOFF  LCD_ENTRYMODE | 0x00; // Display is not shifted
+
     struct hd44780 *h = oid_alloc(args[0], command_config_hd44780, sizeof(*h));
     ndelay(500000);
     h->d0 = gpio_out_setup(args[3], 1);
@@ -105,29 +121,10 @@ command_config_hd44780(uint32_t *args)
     h->d6 = gpio_out_setup(args[9], 1);
     h->d7 = gpio_out_setup(args[10], 1);
     h->rs = gpio_out_setup(args[1], 0);
-    // h->rw = gpio_out_setup(args[2], 0);    
+    // h->rw = gpio_out_setup(args[2], 0); // since this is never changed it's set in the conf file as 0
     ndelay(5000); // Wait 5us before sending data
     h->e = gpio_out_setup(args[2], 0);
     ndelay(10000);
-
-#define LCD_CONFIGURATION        0x20                /**< Set function */
-#define LCD_8BIT        LCD_CONFIGURATION | 0x10    /**<    8 bits interface */
-#define LCD_2LINE        LCD_CONFIGURATION | 0x08    /**<    2 line display */
-#define LCD_5X8         LCD_CONFIGURATION | 0x00    /**<    5 X 8 dots */
-#define LCD_DISPLAYMODE         0x08            /**< Set displaymode */
-#define LCD_DISPLAYON       LCD_DISPLAYMODE | 0x04  /**<    Display on */
-#define LCD_DISPLAYOFF      LCD_DISPLAYMODE | 0x00  /**<    Display off */
-#define LCD_CURSORON        LCD_DISPLAYMODE | 0x02  /**<    Cursor on */
-#define LCD_CURSOROFF       LCD_DISPLAYMODE | 0x00  /**<    Cursor off */
-#define LCD_BLINKINGON      LCD_DISPLAYMODE | 0x01  /**<    Blinking on */
-#define LCD_BLINKINGOFF     LCD_DISPLAYMODE | 0x00  /**<    Blinking off */
-#define LCD_CLEAR           0x01    /**< Clear screen */
-#define LCD_HOME            0x02    /**< Cursor move to first digit */
-#define LCD_ENTRYMODE           0x04            /**< Set entrymode */
-#define LCD_INCREASE        LCD_ENTRYMODE | 0x02    /**<    Set cursor move direction -- Increase */
-#define LCD_DECREASE        LCD_ENTRYMODE | 0x00    /**<    Set cursor move direction -- Decrease */
-#define LCD_DISPLAYSHIFTON  LCD_ENTRYMODE | 0x01    /**<    Display is shifted */
-#define LCD_DISPLAYSHIFTOFF LCD_ENTRYMODE | 0x00    /**<    Display is not shifted */
 
     // rest of display init
     hd44780_xmit_byte(h, LCD_8BIT | LCD_2LINE | LCD_5X8); //LCD Configuration: Bits, Lines and Font
@@ -144,7 +141,7 @@ command_config_hd44780(uint32_t *args)
     ndelay(150000);
     
     hd44780_xmit_byte(h, LCD_CLEAR);                  //Clear Screen
-    ndelay(8000000); // clear is slow operation more than 1.53ms
+    ndelay(10000000); // clear is slow operation more than 1.53ms
     
     hd44780_xmit_byte(h, LCD_INCREASE | LCD_DISPLAYSHIFTOFF); //Entrymode: Sets cursor move direction (I/D); specifies to shift the display
     ndelay(150000);
@@ -176,7 +173,7 @@ command_hd44780_send_cmds(uint32_t *args)
 {
     struct hd44780 *h = oid_lookup(args[0], command_config_hd44780);
     gpio_out_write(h->rs, 0);
-    ndelay(5000); // Wait 5us before sending data
+    ndelay(5000); // Wait 5us after changing rs
     uint8_t len = args[1], *cmds = command_decode_ptr(args[2]);
     hd44780_xmit(h, len, cmds);
 }
@@ -187,7 +184,7 @@ command_hd44780_send_data(uint32_t *args)
 {
     struct hd44780 *h = oid_lookup(args[0], command_config_hd44780);
     gpio_out_write(h->rs, 1);
-    ndelay(5000); // Wait 5us before sending data
+    ndelay(5000); // Wait 5us after changing rs
     uint8_t len = args[1], *data = command_decode_ptr(args[2]);
     hd44780_xmit(h, len, data);
 }
