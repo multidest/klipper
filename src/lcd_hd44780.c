@@ -104,10 +104,9 @@ command_config_hd44780(uint32_t *args)
     const uint8_t LCD_CURSOROFF = LCD_DISPLAYMODE | 0x00; // Cursor off
     const uint8_t LCD_BLINKINGOFF = LCD_DISPLAYMODE | 0x00; // Blinking off
     const uint8_t LCD_CLEAR = 0x01; // Clear screen
-    const uint8_t LCD_HOME = 0x02; // Cursor move to first digit
+    // const uint8_t LCD_HOME = 0x02; // Cursor move to first digit
     const uint8_t LCD_ENTRYMODE = 0x04; // Set entrymode
     const uint8_t LCD_INCREASE = LCD_ENTRYMODE | 0x02; // Set cursor move direction -- Increase
-    const uint8_t LCD_DECREASE = LCD_ENTRYMODE | 0x00; // Set cursor move direction -- Decrease
     const uint8_t LCD_DISPLAYSHIFTOFF = LCD_ENTRYMODE | 0x00; // Display is not shifted
 
     struct hd44780 *h = oid_alloc(args[0], command_config_hd44780, sizeof(*h));
