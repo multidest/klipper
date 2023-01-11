@@ -7,7 +7,7 @@
 import logging
 
 BACKGROUND_PRIORITY_CLOCK = 0x7fffffff00000000
-LINE_LENGTH_DEFAULT=20
+LINE_LENGTH_DEFAULT=16
 LINE_LENGTH_OPTIONS={16:16, 20:20}
 
 TextGlyphs = { 'right_arrow': b'\x7e' }
@@ -20,7 +20,7 @@ class HD44780:
         # pin config
         ppins = self.printer.lookup_object('pins')
         pins = [ppins.lookup_pin(config.get(name + '_pin'))
-                for name in ['rs', 'e', 'd4', 'd5', 'd6', 'd7']]
+                for name in ['rs', 'e', 'd0', 'd1', 'd2', 'd3','d4', 'd5', 'd6', 'd7']]
         self.hd44780_protocol_init = config.getboolean('hd44780_protocol_init',
                                                        True)
         self.line_length = config.getchoice('line_length', LINE_LENGTH_OPTIONS,
@@ -38,7 +38,7 @@ class HD44780:
         self.icons = {}
         # framebuffers
         self.text_framebuffers = [bytearray(b' '*2*self.line_length),
-                                  bytearray(b' '*2*self.line_length)]
+                                  bytearray(b' '*2*self.line_length),]
         self.glyph_framebuffer = bytearray(64)
         self.all_framebuffers = [
             # Text framebuffers
@@ -51,9 +51,11 @@ class HD44780:
     def build_config(self):
         self.mcu.add_config_cmd(
             "config_hd44780 oid=%d rs_pin=%s e_pin=%s"
+            " d0_pin=%s d1_pin=%s d2_pin=%s d3_pin=%s"
             " d4_pin=%s d5_pin=%s d6_pin=%s d7_pin=%s delay_ticks=%d" % (
                 self.oid, self.pins[0], self.pins[1],
                 self.pins[2], self.pins[3], self.pins[4], self.pins[5],
+                self.pins[6], self.pins[7], self.pins[8], self.pins[9],
                 self.mcu.seconds_to_clock(HD44780_DELAY)))
         cmd_queue = self.mcu.alloc_command_queue()
         self.send_cmds_cmd = self.mcu.lookup_command(
@@ -90,13 +92,10 @@ class HD44780:
     def init(self):
         curtime = self.printer.get_reactor().monotonic()
         print_time = self.mcu.estimated_print_time(curtime)
-        # Program 4bit / 2-line mode and then issue 0x02 "Home" command
-        if self.hd44780_protocol_init:
-            init = [[0x33], [0x33], [0x32], [0x28, 0x28, 0x02]]
-        else:
-            init = [[0x02]]
+        # Program 8bit / 16-row 4-line mode and then issue 0x02 "Home" command
         # Reset (set positive direction ; enable display and hide cursor)
-        init.append([0x06, 0x0c])
+        init = [[0x38], [0x38], [0x38], [0x8c], [0x01],[0x02],[0x06], [0x0c]]
+        
         for i, cmds in enumerate(init):
             minclock = self.mcu.print_time_to_clock(print_time + i * .100)
             self.send_cmds_cmd.send([self.oid, cmds], minclock=minclock)
