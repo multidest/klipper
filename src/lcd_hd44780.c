@@ -47,7 +47,7 @@ hd44780_xmit_bits(uint8_t toggle, struct gpio_out e, struct gpio_out d0
                   , struct gpio_out d4, struct gpio_out d5, struct gpio_out d6
                   , struct gpio_out d7)
 {
-    gpio_out_toggle(e);
+    ndelay(320000);
     if (toggle & 0x01)
         gpio_out_toggle(d0);
     if (toggle & 0x02)
@@ -65,7 +65,9 @@ hd44780_xmit_bits(uint8_t toggle, struct gpio_out e, struct gpio_out d0
     if (toggle & 0x80)
         gpio_out_toggle(d7);
     gpio_out_toggle(e);
-    ndelay(320); // delay per char
+    ndelay(5000);
+    gpio_out_toggle(e);
+    ndelay(5000); // delay per char
 }
 
 // Transmit 8 bits to the chip
@@ -114,7 +116,7 @@ command_config_hd44780(uint32_t *args)
     h->d7 = gpio_out_setup(args[10], 0);
 
     if (!CONFIG_HAVE_STRICT_TIMING) {
-        h->cmd_wait_ticks = args[12];
+        h->cmd_wait_ticks = args[11];
         return;
     }
 
@@ -124,7 +126,7 @@ command_config_hd44780(uint32_t *args)
     hd44780_xmit_byte(h, 0);
     uint32_t end = timer_read_time();
     irq_enable();
-    uint32_t diff = end - start, delay_ticks = args[12];
+    uint32_t diff = end - start, delay_ticks = args[11];
     if (delay_ticks > diff)
         h->cmd_wait_ticks = delay_ticks - diff;
 }
