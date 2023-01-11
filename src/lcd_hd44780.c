@@ -95,6 +95,7 @@ void
 command_config_hd44780(uint32_t *args)
 {
     struct hd44780 *h = oid_alloc(args[0], command_config_hd44780, sizeof(*h));
+    ndelay(500000);
     h->d0 = gpio_out_setup(args[3], 1);
     h->d1 = gpio_out_setup(args[4], 1);
     h->d2 = gpio_out_setup(args[5], 1);
@@ -104,9 +105,51 @@ command_config_hd44780(uint32_t *args)
     h->d6 = gpio_out_setup(args[9], 1);
     h->d7 = gpio_out_setup(args[10], 1);
     h->rs = gpio_out_setup(args[1], 0);
-    
+    // h->rw = gpio_out_setup(args[2], 0);    
     ndelay(5000); // Wait 5us before sending data
     h->e = gpio_out_setup(args[2], 0);
+    ndelay(10000);
+
+#define LCD_CONFIGURATION        0x20                /**< Set function */
+#define LCD_8BIT        LCD_CONFIGURATION | 0x10    /**<    8 bits interface */
+#define LCD_2LINE        LCD_CONFIGURATION | 0x08    /**<    2 line display */
+#define LCD_5X8         LCD_CONFIGURATION | 0x00    /**<    5 X 8 dots */
+#define LCD_DISPLAYMODE         0x08            /**< Set displaymode */
+#define LCD_DISPLAYON       LCD_DISPLAYMODE | 0x04  /**<    Display on */
+#define LCD_DISPLAYOFF      LCD_DISPLAYMODE | 0x00  /**<    Display off */
+#define LCD_CURSORON        LCD_DISPLAYMODE | 0x02  /**<    Cursor on */
+#define LCD_CURSOROFF       LCD_DISPLAYMODE | 0x00  /**<    Cursor off */
+#define LCD_BLINKINGON      LCD_DISPLAYMODE | 0x01  /**<    Blinking on */
+#define LCD_BLINKINGOFF     LCD_DISPLAYMODE | 0x00  /**<    Blinking off */
+#define LCD_CLEAR           0x01    /**< Clear screen */
+#define LCD_HOME            0x02    /**< Cursor move to first digit */
+#define LCD_ENTRYMODE           0x04            /**< Set entrymode */
+#define LCD_INCREASE        LCD_ENTRYMODE | 0x02    /**<    Set cursor move direction -- Increase */
+#define LCD_DECREASE        LCD_ENTRYMODE | 0x00    /**<    Set cursor move direction -- Decrease */
+#define LCD_DISPLAYSHIFTON  LCD_ENTRYMODE | 0x01    /**<    Display is shifted */
+#define LCD_DISPLAYSHIFTOFF LCD_ENTRYMODE | 0x00    /**<    Display is not shifted */
+
+    // rest of display init
+    lcdCommand( LCD_8BIT | LCD_2LINE | LCD_5X8); //LCD Configuration: Bits, Lines and Font
+    ndelay(150000); //more than 39micro seconds
+    
+    lcdCommand(LCD_8BIT | LCD_2LINE | LCD_5X8);//LCD Configuration: Bits, Lines and Font
+    ndelay(150000); //more than 39micro seconds
+    
+    //specification says 2 is enough but a 3rd one solve issue if restart with keypad buttons pressed 
+    lcdCommand(LCD_8BIT | LCD_2LINE | LCD_5X8);//LCD Configuration: Bits, Lines and Font
+    ndelay(150000); //more than 39micro seconds
+    
+    lcdCommand( LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKINGOFF);    //Display Control : Display on/off, Cursor, Blinking Cursor
+    ndelay(150000);
+    
+    lcdCommand(LCD_CLEAR);                  //Clear Screen
+    ndelay(8000000); // clear is slow operation more than 1.53ms
+    
+    lcdCommand(LCD_INCREASE | LCD_DISPLAYSHIFTOFF); //Entrymode: Sets cursor move direction (I/D); specifies to shift the display
+    ndelay(150000);
+
+    ndelay(10000000);
 
     if (!CONFIG_HAVE_STRICT_TIMING) {
         h->cmd_wait_ticks = args[11];

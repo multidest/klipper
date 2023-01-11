@@ -90,11 +90,7 @@ class HD44780:
         print_time = self.mcu.estimated_print_time(curtime)
         # Program 8bit / 16-row 2-line mode and then issue 0x02 "Home" command
         # Reset (set positive direction ; enable display and hide cursor)
-        init = [[0x38], [0x38], [0x38], [0x8c], [0x01], [0x02], [0x06]]
-
-        for i, cmds in enumerate(init):
-            minclock = self.mcu.print_time_to_clock(print_time + i * .100)
-            self.send_cmds_cmd.send([self.oid, cmds], minclock=minclock)
+        # init is handled in driver code
         self.flush()
     def write_text(self, x, y, data):
         if x + len(data) > self.line_length:
