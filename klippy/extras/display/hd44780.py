@@ -9,7 +9,7 @@ import logging
 BACKGROUND_PRIORITY_CLOCK = 0x7fffffff00000000
 LINE_LENGTH_DEFAULT=16
 
-TextGlyphs = { 'right_arrow': b'\x3e' }
+TextGlyphs = { 'right_arrow': b'\x7e' }
 
 HD44780_DELAY = .000040
 
