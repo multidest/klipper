@@ -45,7 +45,7 @@ static __always_inline void
 hd44780_xmit_bits(uint8_t data, struct gpio_out e, struct gpio_out rs, struct gpio_out d0
                   , struct gpio_out d1, struct gpio_out d2, struct gpio_out d3
                   , struct gpio_out d4, struct gpio_out d5, struct gpio_out d6
-                  , struct gpio_out d7,bool cmd)
+                  , struct gpio_out d7, uint8_t cmd)
 {
     ndelay(320000);
     gpio_out_write(rs, !cmd);
@@ -66,7 +66,7 @@ hd44780_xmit_bits(uint8_t data, struct gpio_out e, struct gpio_out rs, struct gp
 
 // Transmit 8 bits to the chip
 static void
-hd44780_xmit_byte(struct hd44780 *h, uint8_t data, bool cmd)
+hd44780_xmit_byte(struct hd44780 *h, uint8_t data, uint8_t cmd)
 {
     struct gpio_out e = h->e, rs=h->rs, d0 = h->d0, d1 = h->d1, d2 = h->d2, d3 = h->d3, d4 = h->d4, d5 = h->d5, d6 = h->d6, d7 = h->d7;
     hd44780_xmit_bits(data, e, rs, d0, d1, d2, d3, d4, d5, d6, d7, cmd);
@@ -74,7 +74,7 @@ hd44780_xmit_byte(struct hd44780 *h, uint8_t data, bool cmd)
 
 // Transmit a series of bytes to the chip
 static void
-hd44780_xmit(struct hd44780 *h, uint8_t len, uint8_t *data, bool cmd)
+hd44780_xmit(struct hd44780 *h, uint8_t len, uint8_t *data, uint8_t cmd)
 {
     uint32_t last_cmd_time=h->last_cmd_time, cmd_wait_ticks=h->cmd_wait_ticks;
     while (len--) {
@@ -127,23 +127,23 @@ command_config_hd44780(uint32_t *args)
     ndelay(10000);
 
     // rest of display init
-    hd44780_xmit_byte(h, LCD_8BIT | LCD_2LINE | LCD_5X8, true); //LCD Configuration: Bits, Lines and Font
+    hd44780_xmit_byte(h, LCD_8BIT | LCD_2LINE | LCD_5X8, 1); //LCD Configuration: Bits, Lines and Font
     ndelay(150000); //more than 39micro seconds
     
-    hd44780_xmit_byte(h, LCD_8BIT | LCD_2LINE | LCD_5X8, true);//LCD Configuration: Bits, Lines and Font
+    hd44780_xmit_byte(h, LCD_8BIT | LCD_2LINE | LCD_5X8, 1);//LCD Configuration: Bits, Lines and Font
     ndelay(150000); //more than 39micro seconds
     
     //specification says 2 is enough but a 3rd one solve issue if restart with keypad buttons pressed 
-    hd44780_xmit_byte(h, LCD_8BIT | LCD_2LINE | LCD_5X8, true);//LCD Configuration: Bits, Lines and Font
+    hd44780_xmit_byte(h, LCD_8BIT | LCD_2LINE | LCD_5X8, 1);//LCD Configuration: Bits, Lines and Font
     ndelay(150000); //more than 39micro seconds
     
-    hd44780_xmit_byte(h, LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKINGOFF, true);    //Display Control : Display on/off, Cursor, Blinking Cursor
+    hd44780_xmit_byte(h, LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKINGOFF, 1);    //Display Control : Display on/off, Cursor, Blinking Cursor
     ndelay(150000);
     
-    hd44780_xmit_byte(h, LCD_CLEAR, true);                  //Clear Screen
+    hd44780_xmit_byte(h, LCD_CLEAR, 1);                  //Clear Screen
     ndelay(10000000); // clear is slow operation more than 1.53ms
     
-    hd44780_xmit_byte(h, LCD_INCREASE | LCD_DISPLAYSHIFTOFF, true); //Entrymode: Sets cursor move direction (I/D); specifies to shift the display
+    hd44780_xmit_byte(h, LCD_INCREASE | LCD_DISPLAYSHIFTOFF, 1); //Entrymode: Sets cursor move direction (I/D); specifies to shift the display
     ndelay(150000);
 
     ndelay(10000000);
@@ -156,7 +156,7 @@ command_config_hd44780(uint32_t *args)
     // Calibrate cmd_wait_ticks
     irq_disable();
     uint32_t start = timer_read_time();
-    hd44780_xmit_byte(h, 0x02, true);
+    hd44780_xmit_byte(h, 0x02, 1);
     uint32_t end = timer_read_time();
     irq_enable();
     uint32_t diff = end - start, delay_ticks = args[11];
@@ -173,7 +173,7 @@ command_hd44780_send_cmds(uint32_t *args)
 {
     struct hd44780 *h = oid_lookup(args[0], command_config_hd44780);
     uint8_t len = args[1], *cmds = command_decode_ptr(args[2]);
-    hd44780_xmit(h, len, cmds, true);
+    hd44780_xmit(h, len, cmds, 1);
 }
 DECL_COMMAND(command_hd44780_send_cmds, "hd44780_send_cmds oid=%c cmds=%*s");
 
@@ -182,7 +182,7 @@ command_hd44780_send_data(uint32_t *args)
 {
     struct hd44780 *h = oid_lookup(args[0], command_config_hd44780);
     uint8_t len = args[1], *data = command_decode_ptr(args[2]);
-    hd44780_xmit(h, len, data, false);
+    hd44780_xmit(h, len, data, 0);
 }
 DECL_COMMAND(command_hd44780_send_data, "hd44780_send_data oid=%c data=%*s");
 
