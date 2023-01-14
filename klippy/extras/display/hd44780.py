@@ -39,9 +39,9 @@ class HD44780:
         self.all_framebuffers = [
             # Text framebuffers
             (self.text_framebuffers[0], bytearray(b'~'*2*self.line_length),
-             0x80),
+             0x00),
             (self.text_framebuffers[1], bytearray(b'~'*2*self.line_length),
-             0xc0),
+             0x40),
             # Glyph framebuffer
             (self.glyph_framebuffer, bytearray(b'~'*64), 0x40) ]
     def build_config(self):
