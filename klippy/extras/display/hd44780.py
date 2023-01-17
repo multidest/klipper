@@ -43,7 +43,7 @@ class HD44780:
             (self.text_framebuffers[1], bytearray(b'~'*2*self.line_length),
              0x40),
             # Glyph framebuffer
-            (self.glyph_framebuffer, bytearray(b'~'*64), 0x40) ]
+            (self.glyph_framebuffer, bytearray(b'~'*64), 0x00) ]
     def build_config(self):
         self.mcu.add_config_cmd(
             "config_hd44780 oid=%d rs_pin=%s e_pin=%s"
