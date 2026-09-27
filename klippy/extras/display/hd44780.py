@@ -1,4 +1,4 @@
-# Support for HD44780 (20x4 text) LCD displays
+# Support for HD44780 (20x4 or 16x4 text) LCD displays in 4-bit or 8-bit mode
 #
 # Copyright (C) 2018  Kevin O'Connor <kevin@koconnor.net>
 # Copyright (C) 2018  Eric Callahan <arksine.code@gmail.com>
@@ -7,8 +7,8 @@
 import logging
 
 BACKGROUND_PRIORITY_CLOCK = 0x7fffffff00000000
-LINE_LENGTH_DEFAULT=20
-LINE_LENGTH_OPTIONS=[16, 20]
+LINE_LENGTH_DEFAULT = 20
+LINE_LENGTH_OPTIONS = [16, 20]
 
 TextGlyphs = { 'right_arrow': b'\x7e' }
 
@@ -19,12 +19,29 @@ class HD44780:
         self.printer = config.get_printer()
         # pin config
         ppins = self.printer.lookup_object('pins')
+        d0_pin = config.get('d0_pin', None)
+        d1_pin = config.get('d1_pin', None)
+        d2_pin = config.get('d2_pin', None)
+        d3_pin = config.get('d3_pin', None)
+        if any([d0_pin, d1_pin, d2_pin, d3_pin]):
+            if not all([d0_pin, d1_pin, d2_pin, d3_pin]):
+                raise config.error("hd44780 8-bit mode requires all pins: "
+                                   "d0_pin, d1_pin, d2_pin, d3_pin")
+            self.is_8bit = True
+            pin_names = ['rs', 'e', 'd0', 'd1', 'd2', 'd3',
+                         'd4', 'd5', 'd6', 'd7']
+        else:
+            self.is_8bit = False
+            pin_names = ['rs', 'e', 'd4', 'd5', 'd6', 'd7']
+
         pins = [ppins.lookup_pin(config.get(name + '_pin'))
-                for name in ['rs', 'e', 'd4', 'd5', 'd6', 'd7']]
+                for name in pin_names]
         self.hd44780_protocol_init = config.getboolean('hd44780_protocol_init',
                                                        True)
         self.line_length = config.getchoice('line_length', LINE_LENGTH_OPTIONS,
                                             LINE_LENGTH_DEFAULT)
+        self.hd44780_delay = config.getfloat('hd44780_delay', HD44780_DELAY,
+                                             above=0.)
         mcu = None
         for pin_params in pins:
             if mcu is not None and pin_params['chip'] != mcu:
@@ -49,12 +66,23 @@ class HD44780:
             # Glyph framebuffer
             (self.glyph_framebuffer, bytearray(b'~'*64), 0x40) ]
     def build_config(self):
-        self.mcu.add_config_cmd(
-            "config_hd44780 oid=%d rs_pin=%s e_pin=%s"
-            " d4_pin=%s d5_pin=%s d6_pin=%s d7_pin=%s delay_ticks=%d" % (
-                self.oid, self.pins[0], self.pins[1],
-                self.pins[2], self.pins[3], self.pins[4], self.pins[5],
-                self.mcu.seconds_to_clock(HD44780_DELAY)))
+        delay_ticks = self.mcu.seconds_to_clock(self.hd44780_delay)
+        if self.is_8bit:
+            self.mcu.add_config_cmd(
+                "config_hd44780_8bit oid=%d rs_pin=%s e_pin=%s"
+                " d0_pin=%s d1_pin=%s d2_pin=%s d3_pin=%s"
+                " d4_pin=%s d5_pin=%s d6_pin=%s d7_pin=%s delay_ticks=%d" % (
+                    self.oid, self.pins[0], self.pins[1],
+                    self.pins[2], self.pins[3], self.pins[4], self.pins[5],
+                    self.pins[6], self.pins[7], self.pins[8], self.pins[9],
+                    delay_ticks))
+        else:
+            self.mcu.add_config_cmd(
+                "config_hd44780 oid=%d rs_pin=%s e_pin=%s"
+                " d4_pin=%s d5_pin=%s d6_pin=%s d7_pin=%s delay_ticks=%d" % (
+                    self.oid, self.pins[0], self.pins[1],
+                    self.pins[2], self.pins[3], self.pins[4], self.pins[5],
+                    delay_ticks))
         cmd_queue = self.mcu.alloc_command_queue()
         self.send_cmds_cmd = self.mcu.lookup_command(
             "hd44780_send_cmds oid=%c cmds=%*s", cq=cmd_queue)
@@ -90,13 +118,22 @@ class HD44780:
     def init(self):
         curtime = self.printer.get_reactor().monotonic()
         print_time = self.mcu.estimated_print_time(curtime)
-        # Program 4bit / 2-line mode and then issue 0x02 "Home" command
-        if self.hd44780_protocol_init:
-            init = [[0x33], [0x33], [0x32], [0x28, 0x28, 0x02]]
+        if self.is_8bit:
+            if self.hd44780_protocol_init:
+                # 8-bit mode initialization:
+                # 3x Function Set (8-bit, 2-line, 5x8 font)
+                # Display on/cursor off, Clear screen, Entry mode, Home
+                init = [[0x38], [0x38], [0x38], [0x0c], [0x01], [0x06], [0x02]]
+            else:
+                init = [[0x02], [0x06, 0x0c]]
         else:
-            init = [[0x02]]
-        # Reset (set positive direction ; enable display and hide cursor)
-        init.append([0x06, 0x0c])
+            # Standard 4-bit mode initialization
+            if self.hd44780_protocol_init:
+                init = [[0x33], [0x33], [0x32], [0x28, 0x28, 0x02]]
+            else:
+                init = [[0x02]]
+            init.append([0x06, 0x0c])
+
         for i, cmds in enumerate(init):
             minclock = self.mcu.print_time_to_clock(print_time + i * .100)
             self.send_cmds_cmd.send([self.oid, cmds], minclock=minclock)
