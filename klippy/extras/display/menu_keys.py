@@ -6,7 +6,7 @@
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 
-LONG_PRESS_DURATION = 0.800
+LONG_PRESS_DURATION = 1.500
 TIMER_DELAY = .200
 
 class MenuKeys:
