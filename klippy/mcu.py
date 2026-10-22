@@ -400,7 +400,7 @@ class MCU_endstop:
         return self._mcu.clock_to_print_time(next_clock - self._rest_ticks)
     def query_endstop(self, print_time):
         clock = self._mcu.print_time_to_clock(print_time)
-        if self._mcu.is_fileoutput():
+        if self._mcu.is_fileoutput() or self._query_cmd is None:
             return 0
         params = self._query_cmd.send([self._oid], minclock=clock)
         return params['pin_value'] ^ self._invert
