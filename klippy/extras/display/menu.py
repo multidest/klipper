@@ -696,6 +696,7 @@ class MenuManager:
         self.pconfig = self.printer.lookup_object('configfile')
         self.gcode = self.printer.lookup_object('gcode')
         self.gcode_queue = []
+        self.is_executing = False
         self.context = {}
         self.root = None
         self._root = config.get('menu_root', '__main')
@@ -941,22 +942,46 @@ class MenuManager:
                 # current is None, no selection. passthru to container
                 container.run_script(event)
 
+    def _is_cancel_script(self, script):
+        cancel_keywords = ('cancel', 'stop', 'pause', 'm112', 'abort')
+        for line in script.strip().split('\n'):
+            line = line.strip().lower()
+            if not line or line.startswith('#') or line.startswith(';'):
+                continue
+            first_cmd = line.split()[0]
+            if any(kw in first_cmd for kw in cancel_keywords):
+                return True
+        return False
+
     def queue_gcode(self, script):
         if not script:
             return
+        is_cancel = self._is_cancel_script(script)
+        if self.is_executing or self.gcode_queue or self.gcode.get_mutex().test():
+            if not is_cancel:
+                logging.info("Menu gcode dropped (macro/command currently running): %s",
+                             script.strip().replace('\n', '; '))
+                return
+            # If canceling script, purge any pending non-running commands in queue
+            if len(self.gcode_queue) > 1:
+                self.gcode_queue = [self.gcode_queue[0]]
         if not self.gcode_queue:
             reactor = self.printer.get_reactor()
             reactor.register_callback(self.dispatch_gcode)
         self.gcode_queue.append(script)
 
     def dispatch_gcode(self, eventtime):
-        while self.gcode_queue:
-            script = self.gcode_queue[0]
-            try:
-                self.gcode.run_script(script)
-            except Exception:
-                logging.exception("Script running error")
-            self.gcode_queue.pop(0)
+        self.is_executing = True
+        try:
+            while self.gcode_queue:
+                script = self.gcode_queue[0]
+                try:
+                    self.gcode.run_script(script)
+                except Exception:
+                    logging.exception("Script running error")
+                self.gcode_queue.pop(0)
+        finally:
+            self.is_executing = False
 
     def menuitem_from(self, type, **kwargs):
         if type not in menu_items:
