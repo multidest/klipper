@@ -957,7 +957,7 @@ class MenuManager:
         if not script:
             return
         is_cancel = self._is_cancel_script(script)
-        if self.is_executing or self.gcode_queue or self.gcode.get_mutex().test():
+        if self.is_executing or self.gcode_queue:
             if not is_cancel:
                 logging.info("Menu gcode dropped (macro/command currently running): %s",
                              script.strip().replace('\n', '; '))

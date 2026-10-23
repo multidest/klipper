@@ -46,7 +46,7 @@ class GCodeButton:
             menu = self.printer.lookup_object('menu', None)
             is_cancel = any(kw in commands.lower()
                             for kw in ('cancel', 'stop', 'pause', 'm112', 'abort'))
-            if (self.gcode.get_mutex().test() or (menu and getattr(menu, 'is_executing', False))) and not is_cancel:
+            if (menu and getattr(menu, 'is_executing', False)) and not is_cancel:
                 logging.info("Button '%s' press ignored (busy running command)",
                              self.name)
                 return
